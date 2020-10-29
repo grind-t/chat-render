@@ -178,28 +178,11 @@ func NewMessage(text string, width float64, emojis *Emojis, ctx *gg.Context) *Me
 	layout := &flexRowWrapLayout{
 		width:      m.Rect.Width,
 		spacing:    spaceWidth,
+		rowHeight:  float64(emojis.Size),
 		alignItems: 1,
-	}
-	if size := float64(emojis.Size); size > ctx.FontHeight() {
-		layout.rowHeight = size
-	} else {
-		layout.rowHeight = ctx.FontHeight()
 	}
 	m.Rect.Height = flexRowWrap(m.blocks, layout)
 	return m
-}
-
-func NewChat(width, height float64, emojis *Emojis) *Chat {
-	if emojis == nil {
-		emojis = &Emojis{
-			Table: make(map[string]image.Image),
-			Size:  0,
-		}
-	}
-	return &Chat{
-		Rect:   &Rectangle{0, 0, width, height},
-		Emojis: emojis,
-	}
 }
 
 func (m *Message) Draw(ctx *gg.Context) {
