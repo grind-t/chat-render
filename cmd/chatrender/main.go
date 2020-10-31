@@ -9,6 +9,7 @@ import (
 	"image"
 	"io"
 	"os"
+	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -33,7 +34,7 @@ var (
 	emojisPath   string
 	messagesPath string
 	outputDir    string
-	imagesDir    string
+	imagesDir    = "images"
 )
 
 func parseFlags() {
@@ -163,10 +164,11 @@ func render(records []*messageRecord, ffmpegScript *bufio.Writer) error {
 		ctx.SetHexColor(fontColor)
 		chat.Draw(ctx)
 		fileName := strconv.Itoa(i) + ".png"
-		if err := ctx.SavePNG(filepath.Join(imagesDir, fileName)); err != nil {
+		err := ctx.SavePNG(filepath.Join(outputDir, imagesDir, fileName))
+		if err != nil {
 			return err
 		}
-		fmt.Fprintln(ffmpegScript, "file", fileName)
+		fmt.Fprintln(ffmpegScript, "file", path.Join(imagesDir, fileName))
 		duration, err := getSecondsDuration(records[i].timestamp, records[i+1].timestamp)
 		if err != nil {
 			return err
@@ -179,9 +181,8 @@ func render(records []*messageRecord, ffmpegScript *bufio.Writer) error {
 
 func main() {
 	parseFlags()
-	outputDir = filepath.Join(".", outputDir)
-	imagesDir = filepath.Join(outputDir, "images")
-	if err := os.MkdirAll(imagesDir, os.ModePerm); err != nil {
+	err := os.MkdirAll(filepath.Join(".", outputDir, imagesDir), os.ModePerm)
+	if err != nil {
 		panic(err)
 	}
 	ffmpegScript, err := os.Create(filepath.Join(outputDir, "script.txt"))
@@ -193,7 +194,8 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	if err = render(records, bufio.NewWriter(ffmpegScript)); err != nil {
+	err = render(records, bufio.NewWriter(ffmpegScript))
+	if err != nil {
 		panic(err)
 	}
 }
