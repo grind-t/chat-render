@@ -10,11 +10,19 @@ import (
 	"strings"
 
 	"github.com/disintegration/imaging"
+
 	"github.com/fogleman/gg"
 )
 
 type drawer interface {
 	draw(ctx *gg.Context, x, y float64)
+}
+
+type flexRowWrapLayout struct {
+	width      float64
+	spacing    float64
+	rowHeight  float64
+	alignItems int
 }
 
 type stringDrawer struct {
@@ -23,13 +31,6 @@ type stringDrawer struct {
 
 type imageDrawer struct {
 	img image.Image
-}
-
-type flexRowWrapLayout struct {
-	width      float64
-	spacing    float64
-	rowHeight  float64
-	alignItems int
 }
 
 type block struct {
@@ -44,20 +45,38 @@ type Rectangle struct {
 	Height float64
 }
 
-type Message struct {
+type Container struct {
 	blocks []*block
 	Rect   *Rectangle
 }
 
-type Emojis struct {
-	Table map[string]image.Image
-	Size  int
+type Emoji struct {
+	Name  string
+	Image image.Image
+}
+
+type ChatEmojis struct {
+	table         map[string]image.Image
+	size          int
+	namesToFields *strings.Replacer
 }
 
 type Chat struct {
-	Messages []*Message
+	Emojis   *ChatEmojis
+	Messages []*Container
 	Rect     *Rectangle
-	Emojis   *Emojis
+}
+
+func downloadImage(url string) (image.Image, string, error) {
+	response, err := http.Get(url)
+	if err != nil {
+		return nil, "", err
+	}
+	defer response.Body.Close()
+	if response.StatusCode != 200 {
+		return nil, "", errors.New("Received non 200 response code")
+	}
+	return image.Decode(response.Body)
 }
 
 func splitLongWord(word string, width float64, ctx *gg.Context) []string {
@@ -111,33 +130,17 @@ func (b *block) draw(ctx *gg.Context) {
 	b.graphics.draw(ctx, b.rect.X, b.rect.Y)
 }
 
-func DownloadEmoji(url string, emojiSize int) (image.Image, error) {
-	response, err := http.Get(url)
-	if err != nil {
-		return nil, err
-	}
-	defer response.Body.Close()
-	if response.StatusCode != 200 {
-		return nil, errors.New("Received non 200 response code")
-	}
-	img, _, err := image.Decode(response.Body)
-	if err != nil {
-		return nil, err
-	}
-	return imaging.Resize(img, emojiSize, emojiSize, imaging.Lanczos), nil
-}
-
-func DownloadEmojis(list io.Reader, emojisSize int) (*Emojis, error) {
-	emojis := &Emojis{make(map[string]image.Image), emojisSize}
+func DownloadEmojis(list io.Reader) ([]*Emoji, error) {
+	var emojis []*Emoji
 	scanner := bufio.NewScanner(list)
 	for scanner.Scan() {
-		fields := strings.Split(scanner.Text(), " ")
+		fields := strings.Fields(scanner.Text())
 		name, url := fields[0], fields[1]
-		img, err := DownloadEmoji(url, emojisSize)
+		img, _, err := downloadImage(url)
 		if err != nil {
 			return emojis, err
 		}
-		emojis.Table[name] = img
+		emojis = append(emojis, &Emoji{name, img})
 	}
 	if err := scanner.Err(); err != nil {
 		return emojis, err
@@ -145,19 +148,35 @@ func DownloadEmojis(list io.Reader, emojisSize int) (*Emojis, error) {
 	return emojis, nil
 }
 
-func DownloadEmojisFromFile(path string, emojiSize int) (*Emojis, error) {
+func DownloadEmojisFromFile(path string) ([]*Emoji, error) {
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
 	defer file.Close()
-	return DownloadEmojis(file, emojiSize)
+	return DownloadEmojis(file)
 }
 
-func NewMessage(text string, width float64, emojis *Emojis, ctx *gg.Context) *Message {
-	m := &Message{nil, &Rectangle{0, 0, width, 0}}
-	for _, word := range strings.Split(text, " ") {
-		if img, ok := emojis.Table[word]; ok {
+func NewChatEmojis(emojis []*Emoji, emojiSize int) *ChatEmojis {
+	table := make(map[string]image.Image, len(emojis))
+	oldnew := make([]string, len(emojis)*2)
+	for _, e := range emojis {
+		table[e.Name] = imaging.Resize(e.Image, emojiSize, emojiSize, imaging.Lanczos)
+		oldnew = append(oldnew, e.Name)
+		oldnew = append(oldnew, " "+e.Name+" ")
+	}
+	return &ChatEmojis{
+		table:         table,
+		size:          emojiSize,
+		namesToFields: strings.NewReplacer(oldnew...),
+	}
+}
+
+func NewMessage(width float64, text string, emojis *ChatEmojis, ctx *gg.Context) *Container {
+	text = emojis.namesToFields.Replace(text)
+	m := &Container{Rect: &Rectangle{0, 0, width, 0}}
+	for _, word := range strings.Fields(text) {
+		if img, ok := emojis.Get(word); ok {
 			size := img.Bounds().Size()
 			w, h := float64(size.X), float64(size.Y)
 			b := &block{&imageDrawer{img}, &Rectangle{0, 0, w, h}}
@@ -178,17 +197,26 @@ func NewMessage(text string, width float64, emojis *Emojis, ctx *gg.Context) *Me
 	layout := &flexRowWrapLayout{
 		width:      m.Rect.Width,
 		spacing:    spaceWidth,
-		rowHeight:  float64(emojis.Size),
+		rowHeight:  float64(emojis.GetSize()),
 		alignItems: 1,
 	}
 	m.Rect.Height = flexRowWrap(m.blocks, layout)
 	return m
 }
 
-func (m *Message) Draw(ctx *gg.Context) {
-	for _, b := range m.blocks {
+func (c *ChatEmojis) Get(name string) (image.Image, bool) {
+	img, ok := c.table[name]
+	return img, ok
+}
+
+func (c *ChatEmojis) GetSize() int {
+	return c.size
+}
+
+func (c *Container) Draw(ctx *gg.Context) {
+	for _, b := range c.blocks {
 		x, y := b.rect.X, b.rect.Y
-		b.rect.X, b.rect.Y = x+m.Rect.X, y+m.Rect.Y
+		b.rect.X, b.rect.Y = x+c.Rect.X, y+c.Rect.Y
 		b.draw(ctx)
 		b.rect.X, b.rect.Y = x, y
 	}
@@ -204,14 +232,14 @@ func (c *Chat) Draw(ctx *gg.Context) {
 }
 
 func (c *Chat) Append(message string, ctx *gg.Context) {
-	c.Messages = append(c.Messages, NewMessage(message, c.Rect.Width, c.Emojis, ctx))
+	c.Messages = append(c.Messages, NewMessage(c.Rect.Width, message, c.Emojis, ctx))
 	length := len(c.Messages)
 	if length < 2 {
 		return
 	}
 	prevMsg := c.Messages[length-2]
 	currMsg := c.Messages[length-1]
-	spacing := float64(c.Emojis.Size) / 2.0
+	spacing := float64(c.Emojis.GetSize()) / 2.0
 	currMsg.Rect.Y = prevMsg.Rect.Y + prevMsg.Rect.Height + spacing
 	offset := currMsg.Rect.Y + currMsg.Rect.Height - c.Rect.Height
 	if offset <= 0 {
