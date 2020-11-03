@@ -6,7 +6,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"image"
 	"io"
 	"os"
 	"path"
@@ -21,6 +20,7 @@ import (
 
 type messageRecord struct {
 	timestamp string
+	author    string
 	message   string
 }
 
@@ -60,10 +60,11 @@ func getRecordsTXT(file *os.File) ([]*messageRecord, error) {
 	var records []*messageRecord
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
-		fields := strings.SplitN(scanner.Text(), " ", 2)
+		fields := strings.SplitN(scanner.Text(), " ", 3)
 		records = append(records, &messageRecord{
 			timestamp: fields[0],
-			message:   fields[1],
+			author:    fields[1],
+			message:   fields[2],
 		})
 	}
 	return records, scanner.Err()
@@ -76,16 +77,20 @@ func getRecordsCSV(file *os.File) ([]*messageRecord, error) {
 	if err != nil {
 		return records, err
 	}
-	timestampIdx, messageIdx := -1, -1
+	timestampIdx, authorIdx, messageIdx := -1, -1, -1
 	for i, field := range header {
 		if strings.EqualFold(field, "timestamp") {
 			timestampIdx = i
+		} else if strings.EqualFold(field, "author") {
+			authorIdx = i
 		} else if strings.EqualFold(field, "message") {
 			messageIdx = i
 		}
 	}
 	if timestampIdx == -1 {
 		return records, errors.New("missing timestamp field in csv header")
+	} else if authorIdx == -1 {
+		return records, errors.New("missing author field in csv header")
 	} else if messageIdx == -1 {
 		return records, errors.New("missing message field in csv header")
 	}
@@ -98,6 +103,7 @@ func getRecordsCSV(file *os.File) ([]*messageRecord, error) {
 		}
 		records = append(records, &messageRecord{
 			timestamp: fields[timestampIdx],
+			author:    fields[authorIdx],
 			message:   fields[messageIdx],
 		})
 	}
@@ -137,28 +143,25 @@ func render(records []*messageRecord, ffmpegScript *bufio.Writer) error {
 			return err
 		}
 	}
-	emojisSize := int(1.5 * ctx.FontHeight())
-	var emojis *chatrender.Emojis
+	emojiSize := int(1.5 * ctx.FontHeight())
+	var emojis []*chatrender.Emoji
 	if emojisPath != "" {
-		e, err := chatrender.DownloadEmojisFromFile(emojisPath, emojisSize)
+		e, err := chatrender.DownloadEmojisFromFile(emojisPath)
 		if err != nil {
 			return err
 		}
 		emojis = e
 	} else {
-		emojis = &chatrender.Emojis{
-			Table: make(map[string]image.Image),
-			Size:  emojisSize,
-		}
+		emojis = []*chatrender.Emoji{}
 	}
 	chat := &chatrender.Chat{
 		Rect:   &chatrender.Rectangle{0, 0, float64(width), float64(height)},
-		Emojis: emojis,
+		Emojis: chatrender.NewChatEmojis(emojis, emojiSize),
 	}
 	recordsNumber := len(records)
 	records = append(records, records[recordsNumber-1])
 	for i := 0; i < recordsNumber; i++ {
-		chat.Append(records[i].message, ctx)
+		chat.Append(records[i].author+": "+records[i].message, ctx)
 		ctx.SetHexColor(bgColor)
 		ctx.Clear()
 		ctx.SetHexColor(fontColor)
