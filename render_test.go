@@ -8,14 +8,14 @@ import (
 	"github.com/fogleman/gg"
 )
 
-func TestDownloadEmoji(t *testing.T) {
+func TestDownloadImage(t *testing.T) {
 	url := "https://yt3.ggpht.com/aTdRHeRWrR-ziW0vb206Q8TjKAu0CN7hWm4ovlFbTfojfYMnrMVqnipS_Eo1_XQlye6w-3_vYio=w48-h48-c-k-nd"
-	img, err := DownloadEmoji(url, 9)
+	_, format, err := downloadImage(url)
 	if err != nil {
 		t.Error(err)
 	}
-	if size := img.Bounds().Size().Y; size != 9 {
-		t.Errorf("emoji size = %d; want 9", size)
+	if format != "png" {
+		t.Errorf("image format = %s; want png", format)
 	}
 }
 
@@ -23,12 +23,12 @@ func TestDownloadEmojis(t *testing.T) {
 	emoji1 := "_roflanDovolen https://yt3.ggpht.com/VcDowB_DUTaNGEmYwZuxWiDFFKFSSyvJRMlQvWnmdYCrra4CfalTIENlHP75H6_zLKU2rG2Giw=w48-h48-c-k-nd"
 	emoji2 := "_roflanZdarova https://yt3.ggpht.com/qf2k6kEmo4cgMAfmqcfL3Q-p-v8Rd3VGOfK_n5BZCVTi27X-ONtcvJ-2OZqvhw1g6z9tpUA_GQ=w48-h48-c-k-nd"
 	list := strings.NewReader(emoji1 + "\n" + emoji2)
-	emojis, err := DownloadEmojis(list, 9)
+	emojis, err := DownloadEmojis(list)
 	if err != nil {
 		t.Error(err)
 	}
-	if len(emojis.Table) != 2 {
-		t.Errorf("table length = %d; want 2", len(emojis.Table))
+	if len(emojis) != 2 {
+		t.Errorf("table length = %d; want 2", len(emojis))
 	}
 
 }
