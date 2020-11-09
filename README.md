@@ -8,7 +8,7 @@ More tests needed.
    Sample script for getting a list of youtube live chat emojis from the browser console
    
    ```javascript
-   Array.from(document.querySelectorAll('img[role="option"][class*="emoji"][aria-label^=":"]').values()).slice(0, 20).map(e => e.getAttribute('aria-label') + ' ' +              e.getAttribute('src')).join('\n');
+   Array.from(document.querySelectorAll('img[role="option"][class*="emoji"][aria-label^=":"]').values()).slice(0, 20).map(e => e.getAttribute('aria-label') + ' ' + e.getAttribute('src')).join('\n');
    ```
    
    [Sample file](https://github.com/grind-t/chatrender/blob/master/example/yt-emojis.txt).
