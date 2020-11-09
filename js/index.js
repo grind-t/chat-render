@@ -5,9 +5,8 @@ class MessageRecord {
    * @param {string} author 
    * @param {string} message 
    */
-  constructor(timestamp, author, message) {
+  constructor(timestamp, message) {
     this.timestamp = timestamp;
-    this.author = author;
     this.message = message;
   }
 }
@@ -35,10 +34,11 @@ async function getRecordsFromTextFileAsync(file) {
   const text = await readTextFileAsync(file);
   const records = [];
   for (const line of text.split("\n")) {
-    const fields = line.split(" ");
-    if (fields.length < 3)
+    const i = line.indexOf(" ");
+    if (i < 1) {
       continue;
-    records.push(new MessageRecord(...fields));
+    }
+    records.push(new MessageRecord(line.slice(0, i), line.slice(i + 1)));
   }
   return records;
 }
@@ -50,13 +50,36 @@ async function getRecordsFromTextFileAsync(file) {
  */
 function getRecordsFromCSVFileAsync(file) {
   return new Promise((resolve, reject) => {
+    const records = [];
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
-      complete: (results) => resolve(results.data),
+      step: (results) => {
+        if (results.error) {
+          console.warn(results.error);
+        }
+        const timestamp = results.data.timestamp;
+        const message = results.data.author
+          ? `${results.data.author}: ${results.data.message}`
+          : results.data.message;
+        records.push(new MessageRecord(timestamp, message));
+      },
+      complete: () => resolve(records),
       error: reject,
     });
   });
+}
+
+/**
+ * 
+ * @param {File} file 
+ * @returns {Promise<MessageRecord[]>}
+ */
+function getRecordsFromFileAsync(file) {
+  if (file.name.endsWith(".csv")) {
+    return getRecordsFromCSVFileAsync(file);
+  }
+  return getRecordsFromTextFileAsync(file);
 }
 
 /**
@@ -87,7 +110,7 @@ async function render(
     ctx.fillStyle = bgFillStyle;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = fontFillStyle;
-    chat.append(`${records[i].author}: ${records[i].message}`, ctx);
+    chat.append(records[i].message, ctx);
     chat.draw(ctx, 0, 0);
     const blob = await new Promise((resolve) => canvas.toBlob(resolve));
     const filepath = `img/${i}.png`;
@@ -116,12 +139,7 @@ async function main() {
   const emojiList = await readTextFileAsync(configForm.emojisFile.files[0]);
   const emojiSet = downloadEmojiSet(emojiList, fontSize * 1.5);
   const messagesFile = configForm.messagesFile.files[0];
-  let records = undefined;
-  if (messagesFile.name.endsWith(".csv")) {
-    records = await getRecordsFromCSVFileAsync(messagesFile);
-  } else {
-    records = await getRecordsFromTextFileAsync(messagesFile);
-  }
+  const records = await getRecordsFromFileAsync(messagesFile);
   configForm.remove();
   document.body.append(canvas);
   render(records, emojiSet, canvas, bgFillStyle, font, fontFillStyle);

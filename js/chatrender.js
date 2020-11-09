@@ -1,3 +1,8 @@
+/**
+ * @typedef {object} Block
+ * @property {Rectangle} rect
+ */
+
 class Rectangle {
   /**
    * 
@@ -158,7 +163,11 @@ class ChatDrawer {
     this.rect = new Rectangle(0, 0, width, height);
     this.messages = [];
     this._emojiSet = emojiSet;
-    this._fieldsRegExp = messageFieldsRegExp(Array.from(emojiSet.table.keys()));
+    // TODO: escape names?
+    this._emojisRegExp = new RegExp(
+      Array.from(emojiSet.table.keys()).join("|"),
+      "g",
+    );
   }
 
   /**
@@ -167,9 +176,14 @@ class ChatDrawer {
    * @param {CanvasRenderingContext2D} ctx 
    */
   append(message, ctx) {
-    const fields = message.match(this._fieldsRegExp);
+    message = message.replace(this._emojisRegExp, (match) => ` ${match} `);
     this.messages.push(
-      new MessageDrawer(this.rect.width, fields, this._emojiSet, ctx),
+      new MessageDrawer(
+        this.rect.width,
+        message.split(/\s+/),
+        this._emojiSet,
+        ctx,
+      ),
     );
     const length = this.messages.length;
     if (length < 2) {
@@ -179,18 +193,7 @@ class ChatDrawer {
     const currMsg = this.messages[length - 1];
     const vSpacing = this._emojiSet.emojiSize / 2;
     currMsg.rect.y = prevMsg.rect.y + prevMsg.rect.height + vSpacing;
-    const offset = currMsg.rect.y + currMsg.rect.height - this.rect.height;
-    if (offset <= 0) {
-      return;
-    }
-    let removeMessages = 0;
-    for (const message of this.messages) {
-      message.rect.y -= offset;
-      if (message.rect.y + message.rect.height < 0) {
-        removeMessages++;
-      }
-    }
-    this.messages.splice(0, removeMessages);
+    this.messages.splice(0, scrollDown(this.messages, this.rect));
   }
 
   /**
@@ -255,7 +258,7 @@ function splitLongWord(word, maxwidth, ctx) {
 
 /**
  * 
- * @param {{rect: Rectangle}} blocks 
+ * @param {Block[]} blocks
  * @param {FlexRowWrapLayout} layout 
  * @returns {number} height
  */
@@ -282,16 +285,22 @@ function flexRowWrap(blocks, layout) {
 
 /**
  * 
- * @param {string[]} emojiNames 
- * @returns {RegExp}
+ * @param {Block[]} blocks 
+ * @param {Rectangle} bounds
+ * @returns {number} out of bounds
  */
-function messageFieldsRegExp(emojiNames) {
-  const wordPattern = "\\S+?(?:\\s|$)";
-  if (!emojiNames || !emojiNames.length) {
-    return new RegExp(wordPattern, "g");
+function scrollDown(blocks, bounds) {
+  const last = blocks[blocks.length - 1];
+  const offset = (last.rect.y + last.rect.height) - (bounds.y + bounds.height);
+  if (offset <= 0) {
+    return 0;
   }
-  // TODO: escape names?
-  const emojiPattern = emojiNames.join("|");
-  const fieldPattern = `${emojiPattern}|${wordPattern}`;
-  return new RegExp(fieldPattern, "g");
+  let outOfBounds = 0;
+  for (const block of blocks) {
+    block.rect.y -= offset;
+    if (block.rect.y + block.rect.height <= bounds.y) {
+      outOfBounds++;
+    }
+  }
+  return outOfBounds;
 }
