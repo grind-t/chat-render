@@ -1,6 +1,6 @@
 # Usage
 1. Prepare a file with emotes from the chat. (list of name / url pairs separated by spaces).<br>
-   Sample script for getting a list of youtube live chat emojis from the browser console
+   Sample script for getting a list of youtube live chat emotes from the browser console
    
    ```javascript
    Array.from(document.querySelectorAll('img[role="option"][class*="emoji"][aria-label^=":"]').values()).slice(0, 20).map(e => e.getAttribute('aria-label') + ' ' + e.getAttribute('src')).join('\n');
