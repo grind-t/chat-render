@@ -57,9 +57,10 @@ class MessageStyle {
 }
 
 class MessageLayout {
-  constructor(width, spacing, lineHeight, verticalAlign) {
+  constructor(width, wordsSpacing, linesSpacing, lineHeight, verticalAlign) {
     this.width = width;
-    this.spacing = spacing;
+    this.wordsSpacing = wordsSpacing;
+    this.linesSpacing = linesSpacing;
     this.lineHeight = lineHeight;
     this.verticalAlign = verticalAlign;
   }
@@ -70,7 +71,7 @@ class MessageLayout {
     for (const item of items) {
       if (lineWidth + item.width > this.width) {
         lineWidth = 0;
-        lineY += this.lineHeight;
+        lineY += this.lineHeight + this.linesSpacing;
       }
       item.x = lineWidth;
       item.y = lineY;
@@ -79,7 +80,7 @@ class MessageLayout {
       } else if (this.verticalAlign === 'bottom') {
         item.y += this.lineHeight - item.height;
       }
-      lineWidth += item.width + this.spacing;
+      lineWidth += item.width + this.wordsSpacing;
     }
     const totalHeight = lineY + this.lineHeight;
     return totalHeight;
@@ -87,11 +88,24 @@ class MessageLayout {
 }
 
 class MessageDrawer extends Rectangle {
-  constructor(width, height, authorDrawer, drawers, style) {
-    super(0, 0, width, height);
-    this.authorDrawer = authorDrawer;
-    this.drawers = drawers;
+  constructor(width, author, message, emotes, style, ctx) {
+    super(0, 0, width, 0);
+    this.authorDrawer = null;
+    this.drawers = null;
     this.style = style;
+
+    const fontHeight = ctx.measureText('W').actualBoundingBoxAscent;
+    const layout = new MessageLayout(
+      this.width,
+      ctx.measureText(' ').width,
+      0,
+      emotes.size,
+      'center',
+    );
+    const authorWidth = ctx.measureText(author).width;
+    this.authorDrawer = new StringDrawer(author, authorWidth, fontHeight);
+    this.drawers = getDrawers(message, emotes, this.width, ctx);
+    this.height = layout.arrange(this.authorDrawer, ...this.drawers);
   }
 
   draw(ctx, offsetX, offsetY) {
@@ -121,14 +135,14 @@ class ChatDrawer extends Rectangle {
   }
 
   append(author, message, ctx) {
-    const spacing = ctx.measureText(' ').width;
-    const layout = new MessageLayout(this.width, spacing, this.emotes.size, 'center');
-    const fontHeight = ctx.measureText('W').actualBoundingBoxAscent;
-    const authorWidth = ctx.measureText(author).width;
-    const authorDrawer = new StringDrawer(author, authorWidth, fontHeight);
-    const drawers = getDrawers(message, this.emotes, this.width, ctx);
-    const height = layout.arrange(authorDrawer, ...drawers);
-    const md = new MessageDrawer(this.width, height, authorDrawer, drawers, this.style.messageStyle);
+    const md = new MessageDrawer(
+      this.width, 
+      author, 
+      message, 
+      this.emotes,
+      this.style.messageStyle,
+      ctx,
+    );
     this.messageDrawers.push(md);
     const length = this.messageDrawers.length;
     if (length < 2) {

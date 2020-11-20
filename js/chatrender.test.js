@@ -10,15 +10,16 @@ describe('chatrender', () => {
     assert.strictEqual(wordsNumber, 3);
   });
   it('MessageLayout.arrange', () => {
-    const layout = new MessageLayout(100, 5, 50);
+    const layout = new MessageLayout(100, 5, 10, 40);
     const rects = [
       new Rectangle(0, 0, 40, 40),
       new Rectangle(0, 0, 40, 40),
       new Rectangle(0, 0, 40, 40),
     ];
-    layout.arrange(rects);
+    const totalHeight = layout.arrange(...rects);
     const last = rects[rects.length - 1];
     assert.strictEqual(last.y, 50);
+    assert.strictEqual(totalHeight, 90);
   });
   it('scrollDown', () => {
     const rects = [

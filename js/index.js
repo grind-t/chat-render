@@ -61,6 +61,7 @@ async function main() {
   const configForm = document.forms.config;
   const width = parseFloat(configForm.width.value);
   const height = parseFloat(configForm.height.value);
+  const messagesSpacing = parseFloat(configForm.messagesSpacing.value);
   const bgFillStyle = configForm.bgFillStyle.value;
   const font = configForm.font.value;
   const emotesSize = parseFloat(configForm.emotesSize.value);
@@ -76,7 +77,7 @@ async function main() {
   const chatStyle = new ChatStyle(bgFillStyle, messageStyle);
   const emotesList = await readTextFileAsync(emotesFile);
   const emotes = downloadEmotes(emotesList, emotesSize);
-  const chat = new ChatDrawer(width, height, emotes, emotesSize / 2, chatStyle);
+  const chat = new ChatDrawer(width, height, emotes, messagesSpacing, chatStyle);
   const records = await getRecords(messagesFile);
   configForm.remove();
   document.body.append(canvas);
