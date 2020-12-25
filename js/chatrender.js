@@ -39,13 +39,10 @@ class Emotes {
     this.size = size;
     this.regexp = null;
 
-    let pattern = '';
-    for (name of map.keys()) {
-      name.replace(/[.*+\-?^${}()|[\]\\]/g, '\\$&');
-      pattern += name + '|';
-    }
-    pattern = pattern.slice(0, -1); // Remove last '|'.
-    this.regexp = new RegExp(pattern, 'g');
+    let pattern = [];
+    for (const name of map.keys())
+      pattern.push(name.replace(/[.*+\-?^${}()|[\]\\]/g, '\\$&'));
+    this.regexp = new RegExp(pattern.join('|'), 'g');
   }
 }
 
