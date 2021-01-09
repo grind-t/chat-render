@@ -1,0 +1,8 @@
+.pane {
+  display: inline-block;
+  vertical-align: top;
+}
+  
+.form label {
+  display: block;
+}
