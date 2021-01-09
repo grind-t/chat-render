@@ -815,7 +815,7 @@ function getRecords(file) {
         });
     });
 }
-function convertPropertiesFields(properties) {
+function chatPropertiesFromFields(properties) {
     return {
         width: parseFloat(properties.width),
         height: parseFloat(properties.height),
@@ -826,8 +826,8 @@ function convertPropertiesFields(properties) {
         style: new ChatStyle(properties.backgroundFillStyle, new MessageStyle(properties.authorFillStyle, properties.messageFillStyle))
     };
 }
-async function convertSettingsFields(settings) {
-    const properties = convertPropertiesFields(settings.properties);
+async function chatSettingsFromFields(settings) {
+    const properties = chatPropertiesFromFields(settings.properties);
     const messages = await getRecords(settings.data.messages);
     console.log(messages);
     const emotes = settings.data.emotes ? await downloadEmotes(settings.data.emotes, properties.emotesSize) : undefined;
@@ -843,37 +843,34 @@ function nextMessageFits(lastMessage, messagesSpacing, chatHeight) {
     const commonHeight = lastMessage.height;
     return lastMessage.y + commonHeight + messagesSpacing + commonHeight < chatHeight;
 }
-function sampleMessage(emotesSize, layout, ctx2) {
-    const emoteName = ":slightly_smiling_face:";
-    const emoteImage = new Image(emotesSize, emotesSize);
-    const loading = new Promise((resolve)=>emoteImage.onload = resolve
-    );
-    emoteImage.crossOrigin = "anonymous";
-    emoteImage.src = "https://yt3.ggpht.com/DC086aBQNoxY0qcpdIKVTR7w9F0HxRe-OBREc74rr6PHogHaYUha9vDmkL3Pb8SrI108XNUz=w48-h48-c-k-nd";
+function sampleMessage(sampleEmote, layout, ctx2) {
+    const sampleEmoteName = ":roflanChelik:";
     const emotesMap = new Map([
         [
-            emoteName,
-            emoteImage
+            sampleEmoteName,
+            sampleEmote
         ]
     ]);
     const emotes = new Emotes(emotesMap);
-    const str = `\n    Author Lorem ipsum dolor sit amet ${emoteName}, consectetur adipiscing elit, \n    sed do eiusmod tempor incididunt ut labore et dolore magna aliqua ${emoteName}. \n    Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex \n    ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse \n    cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat ${emoteName}\n    cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.\n  `;
-    return [
-        Message.fromStringWithEmotes(str, emotes, layout, ctx2),
-        loading
-    ];
+    const str = `\n    Author Lorem ipsum dolor sit amet ${sampleEmoteName}, consectetur adipiscing elit, \n    sed do eiusmod tempor incididunt ut labore et dolore magna aliqua ${sampleEmoteName}. \n    Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex \n    ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse \n    cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat ${sampleEmoteName}\n    cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.\n  `;
+    return Message.fromStringWithEmotes(str, emotes, layout, ctx2);
 }
 async function drawChatSample(ctx2, properties) {
+    const sampleEmote = new Image(properties.emotesSize, properties.emotesSize);
+    const emoteLoading = new Promise((resolve)=>sampleEmote.onload = resolve
+    );
+    sampleEmote.crossOrigin = "anonymous";
+    sampleEmote.src = "https://yt3.ggpht.com/DC086aBQNoxY0qcpdIKVTR7w9F0HxRe-OBREc74rr6PHogHaYUha9vDmkL3Pb8SrI108XNUz=w48-h48-c-k-nd";
     ctx2.font = properties.font;
     const messageLayout = new MessageLayout(ctx2, properties.width, properties.linesSpacing);
     const chat = new Chat(properties.width, properties.height);
-    let [lastMessage, emotesLoading] = sampleMessage(properties.emotesSize, messageLayout, ctx2);
+    let lastMessage = sampleMessage(sampleEmote, messageLayout, ctx2);
     chat.push(lastMessage, properties.messagesSpacing);
     while(nextMessageFits(lastMessage, properties.messagesSpacing, properties.height)){
         lastMessage = new Message(lastMessage.content, lastMessage.width, lastMessage.height);
         chat.push(lastMessage, properties.messagesSpacing);
     }
-    await emotesLoading;
+    await emoteLoading;
     chat.draw(ctx2, 0, 0, properties.style);
 }
 var global$1 = typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {
@@ -5748,23 +5745,23 @@ async function renderChat(canvas, settings) {
     const data = settings.data;
     ctx2.font = properties.font;
     const messageLayout = new MessageLayout(ctx2, properties.width, properties.linesSpacing);
+    const emotes = data.emotes;
+    let messageFrom;
+    if (emotes) {
+        messageFrom = (str)=>Message.fromStringWithEmotes(str, emotes, messageLayout, ctx2)
+        ;
+    } else {
+        messageFrom = (str)=>Message.fromString(str, messageLayout, ctx2)
+        ;
+    }
     const records = settings.data.messages;
     const chat = new Chat(properties.width, properties.height);
     const zip = new jszip_min();
     const ffmpegScript = [
         "ffconcat version 1.0"
     ];
-    let messageFrom;
-    if (data.emotes) {
-        messageFrom = (str)=>Message.fromStringWithEmotes(str, data.emotes, messageLayout, ctx2)
-        ;
-    } else {
-        messageFrom = (str)=>Message.fromString(str, messageLayout, ctx2)
-        ;
-    }
     records.push(records[records.length - 1]);
     for(let i = 0; i < records.length - 1; i++){
-        ctx2.clearRect(0, 0, properties.width, properties.height);
         const str = `${records[i].author} ${records[i].message}`;
         const message = messageFrom(str);
         chat.push(message, properties.messagesSpacing);
@@ -5816,7 +5813,7 @@ function getSettingsFields() {
 }
 export async function updatePreview() {
     const fields = getPropertiesFields();
-    const properties = convertPropertiesFields(fields);
+    const properties = chatPropertiesFromFields(fields);
     const canvas = document.querySelector("#chat");
     canvas.width = properties.width;
     canvas.height = properties.height;
@@ -5825,26 +5822,29 @@ export async function updatePreview() {
 }
 export async function render() {
     const fields = getSettingsFields();
-    const settings = await convertSettingsFields(fields);
+    const settings = await chatSettingsFromFields(fields);
     const canvas = document.querySelector("#chat");
     renderChat(canvas, settings);
 }
 function splitLongText(text, lineWidth, ctx2) {
-    const chunks = [];
-    const textFrom = (str)=>new TextItem(str, ctx2.measureText(str).width, text.height)
-    ;
+    const items = [];
     const strIter = text.content[Symbol.iterator]();
-    let current = textFrom(strIter.next().value);
-    for (const c of strIter){
-        let next = textFrom(current.content + c);
-        if (next.width > lineWidth) {
-            chunks.push(current);
-            next = textFrom(c);
+    let currentChunk = strIter.next().value;
+    let currentWidth = ctx2.measureText(currentChunk).width;
+    for (const __char of strIter){
+        const nextChunk = currentChunk + __char;
+        const nextWidth = ctx2.measureText(nextChunk).width;
+        if (nextWidth > lineWidth) {
+            items.push(new TextItem(currentChunk, currentWidth, text.height));
+            currentChunk = __char;
+            currentWidth = ctx2.measureText(currentChunk).width;
+        } else {
+            currentChunk = nextChunk;
+            currentWidth = nextWidth;
         }
-        current = next;
     }
-    chunks.push(current);
-    return chunks;
+    items.push(new TextItem(currentChunk, currentWidth, text.height));
+    return items;
 }
 function parseString(str, lineWidth, fontHeight, ctx2) {
     const items = [];

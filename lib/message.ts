@@ -126,21 +126,24 @@ function splitLongText(
   lineWidth: number,
   ctx: CanvasRenderingContext2D,
 ): TextItem[] {
-  const chunks: TextItem[] = [];
-  const textFrom = (str: string) =>
-    new TextItem(str, ctx.measureText(str).width, text.height);
+  const items: TextItem[] = [];
   const strIter = text.content[Symbol.iterator]();
-  let current = textFrom(strIter.next().value);
-  for (const c of strIter) {
-    let next = textFrom(current.content + c);
-    if (next.width > lineWidth) {
-      chunks.push(current);
-      next = textFrom(c);
+  let currentChunk = strIter.next().value;
+  let currentWidth = ctx.measureText(currentChunk).width;
+  for (const char of strIter) {
+    const nextChunk = currentChunk + char;
+    const nextWidth = ctx.measureText(nextChunk).width;
+    if (nextWidth > lineWidth) {
+      items.push(new TextItem(currentChunk, currentWidth, text.height));
+      currentChunk = char;
+      currentWidth = ctx.measureText(currentChunk).width;
+    } else {
+      currentChunk = nextChunk;
+      currentWidth = nextWidth;
     }
-    current = next;
   }
-  chunks.push(current);
-  return chunks;
+  items.push(new TextItem(currentChunk, currentWidth, text.height));
+  return items;
 }
 
 function parseString(

@@ -1,7 +1,7 @@
 import { ChatStyle, Emotes, MessageStyle } from "./chat.ts";
 import papa from "https://cdn.skypack.dev/papaparse";
 
-export interface PropertiesFields {
+export interface ChatPropertiesFields {
   width: string;
   height: string;
   messagesSpacing: string;
@@ -13,14 +13,14 @@ export interface PropertiesFields {
   messageFillStyle: string;
 }
 
-export interface DataFields {
+export interface ChatDataFields {
   messages: File;
   emotes?: File;
 }
 
-export interface SettingsFields {
-  properties: PropertiesFields;
-  data: DataFields;
+export interface ChatSettingsFields {
+  properties: ChatPropertiesFields;
+  data: ChatDataFields;
 }
 
 export interface ChatProperties {
@@ -89,8 +89,8 @@ function getRecords(file: File): Promise<MessageRecord[]> {
   });
 }
 
-export function convertPropertiesFields(
-  properties: PropertiesFields,
+export function chatPropertiesFromFields(
+  properties: ChatPropertiesFields,
 ): ChatProperties {
   return {
     width: parseFloat(properties.width),
@@ -106,10 +106,10 @@ export function convertPropertiesFields(
   };
 }
 
-export async function convertSettingsFields(
-  settings: SettingsFields,
+export async function chatSettingsFromFields(
+  settings: ChatSettingsFields,
 ): Promise<ChatSettings> {
-  const properties = convertPropertiesFields(settings.properties);
+  const properties = chatPropertiesFromFields(settings.properties);
   const messages = await getRecords(settings.data.messages);
   console.log(messages);
   const emotes = settings.data.emotes

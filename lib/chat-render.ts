@@ -17,25 +17,20 @@ export default async function renderChat(
     properties.width,
     properties.linesSpacing,
   );
+  const emotes = data.emotes;
+  let messageFrom: (str: string) => Message;
+  if (emotes) {
+    messageFrom = (str: string) =>
+      Message.fromStringWithEmotes(str, emotes, messageLayout, ctx);
+  } else {
+    messageFrom = (str: string) => Message.fromString(str, messageLayout, ctx);
+  }
   const records = settings.data.messages;
   const chat = new Chat(properties.width, properties.height);
   const zip = new JSZip();
   const ffmpegScript = ["ffconcat version 1.0"];
-  let messageFrom;
-  if (data.emotes) {
-    messageFrom = (str: string) =>
-      Message.fromStringWithEmotes(
-        str,
-        <Emotes> data.emotes,
-        messageLayout,
-        ctx,
-      );
-  } else {
-    messageFrom = (str: string) => Message.fromString(str, messageLayout, ctx);
-  }
   records.push(records[records.length - 1]);
   for (let i = 0; i < records.length - 1; i++) {
-    ctx.clearRect(0, 0, properties.width, properties.height);
     const str = `${records[i].author} ${records[i].message}`;
     const message = messageFrom(str);
     chat.push(message, properties.messagesSpacing);

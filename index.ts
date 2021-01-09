@@ -2,16 +2,16 @@
 /// <reference lib="dom" />
 
 import {
-  convertPropertiesFields,
-  convertSettingsFields,
-  DataFields,
-  PropertiesFields,
-  SettingsFields,
+  ChatDataFields,
+  ChatPropertiesFields,
+  chatPropertiesFromFields,
+  ChatSettingsFields,
+  chatSettingsFromFields,
 } from "./lib/chat-settings.ts";
 import drawChatSample from "./lib/chat-sample.ts";
 import renderChat from "./lib/chat-render.ts";
 
-function getPropertiesFields(): PropertiesFields {
+function getPropertiesFields(): ChatPropertiesFields {
   const settings = <HTMLFormElement> document.forms.namedItem("settings");
   const properties = <HTMLFieldSetElement> settings.properties;
   const elements = properties.elements;
@@ -23,7 +23,7 @@ function getPropertiesFields(): PropertiesFields {
   return result;
 }
 
-function getDataFields(): DataFields {
+function getDataFields(): ChatDataFields {
   const settings = <HTMLFormElement> document.forms.namedItem("settings");
   const data = <HTMLFieldSetElement> settings.data;
   const elements = data.elements;
@@ -35,7 +35,7 @@ function getDataFields(): DataFields {
   return result;
 }
 
-function getSettingsFields(): SettingsFields {
+function getSettingsFields(): ChatSettingsFields {
   return {
     properties: getPropertiesFields(),
     data: getDataFields(),
@@ -44,7 +44,7 @@ function getSettingsFields(): SettingsFields {
 
 export async function updatePreview() {
   const fields = getPropertiesFields();
-  const properties = convertPropertiesFields(fields);
+  const properties = chatPropertiesFromFields(fields);
   const canvas = <HTMLCanvasElement> document.querySelector("#chat");
   canvas.width = properties.width;
   canvas.height = properties.height;
@@ -54,7 +54,7 @@ export async function updatePreview() {
 
 export async function render() {
   const fields = getSettingsFields();
-  const settings = await convertSettingsFields(fields);
+  const settings = await chatSettingsFromFields(fields);
   const canvas = <HTMLCanvasElement> document.querySelector("#chat");
   renderChat(canvas, settings);
 }
