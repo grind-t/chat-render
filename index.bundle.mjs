@@ -849,7 +849,7 @@ function sampleMessage(emotesSize, layout, ctx2) {
     const loading = new Promise((resolve)=>emoteImage.onload = resolve
     );
     emoteImage.crossOrigin = "anonymous";
-    emoteImage.src = "/lib/smiling-face.png";
+    emoteImage.src = "../public/sample-emote.png";
     const emotesMap = new Map([
         [
             emoteName,
