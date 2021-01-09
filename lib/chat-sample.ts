@@ -25,7 +25,7 @@ function sampleMessage(
   const emoteImage = new Image(emotesSize, emotesSize);
   const loading = new Promise<Event>((resolve) => emoteImage.onload = resolve);
   emoteImage.crossOrigin = "anonymous";
-  emoteImage.src = "/lib/smiling-face.png";
+  emoteImage.src = "public/sample-emote.png";
   const emotesMap = new Map([[emoteName, emoteImage]]);
   const emotes = new Emotes(emotesMap);
   const str = `
