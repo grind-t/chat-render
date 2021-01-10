@@ -852,7 +852,7 @@ function sampleMessage(sampleEmote, layout, ctx2) {
         ]
     ]);
     const emotes = new Emotes(emotesMap);
-    const str = `\n    Author Lorem ipsum dolor sit amet ${sampleEmoteName}, consectetur adipiscing elit, \n    sed do eiusmod tempor incididunt ut labore et dolore magna aliqua ${sampleEmoteName}. \n    Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex \n    ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse \n    cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat ${sampleEmoteName}\n    cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.\n  `;
+    const str = `\n    Author Lorem ipsum ${sampleEmoteName} dolor sit amet, consectetur adipiscing elit, \n    sed do eiusmod tempor incididunt ut labore et dolore magna ${sampleEmoteName} aliqua. \n    Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex \n    ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse \n    cillum dolore eu fugiat nulla pariatur. Excepteur sint ${sampleEmoteName} occaecat \n    cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.\n  `;
     return Message.fromStringWithEmotes(str, emotes, layout, ctx2);
 }
 async function drawChatSample(ctx2, properties) {
