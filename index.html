@@ -1,86 +1,131 @@
 <!DOCTYPE html>
 <html lang="en-US">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="YouTube/Twitch/etc chat render" />
+    <title>Editor</title>
+    <link rel="stylesheet" href="./index.css?version=1" />
+  </head>
 
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Editor</title>
-  <link rel="stylesheet" href="./index.css">
-  <style>
-    canvas {
-      border: 1px solid;
-    }
-  </style>
-</head>
-
-<body>
-  <main>
-    <section class="pane">
-      <h2>Settings</h2>
-      <form name="settings" class="form" onsubmit="render(); return false;">
-        <fieldset name="properties">
-          <legend>Properties</legend>
-          <label>
-            Width:
-            <input name="width" type="number" value="256" onchange="updatePreview()" required></input>
-          </label>
-          <label>
-            Height:
-            <input name="height" type="number" value="720" onchange="updatePreview()" required></input>
-          </label>
-          <label>
-            Messages spacing:
-            <input name="messagesSpacing" type="number" value="6" onchange="updatePreview()" required></input>
-          </label>
-          <label>
-            Lines spacing:
-            <input name="linesSpacing" type="number" value="6" onchange="updatePreview()" required></input>
-          </label>
-          <label>
-            Emotes size:
-            <input name="emotesSize" type="number" value="24" onchange="updatePreview()" required></input>
-          </label>
-          <label>
-            Font:
-            <input name="font" type="text" value="13px arial" onchange="updatePreview()" required></input>
-          </label>
-          <label>
-            Background fill style:
-            <input name="backgroundFillStyle" type="text" value="#00B140" onchange="updatePreview()" required></input>
-          </label>
-          <label>
-            Author fill style:
-            <input name="authorFillStyle" type="text" value="#BABABA" onchange="updatePreview()" required></input>
-          </label>
-          <label>
-            Message fill style:
-            <input name="messageFillStyle" type="text" value="#FFFFFF" onchange="updatePreview()" required></input>
-          </label>
-        </fieldset>
-        <fieldset name="data">
-          <legend>Data</legend>
-          <label>
-            Messages: <input name="messages" type="file" required></input>
-          </label>
-          <label>
-            Emotes: <input name="emotes" type="file" required></input>
-          </label>
-        </fieldset>
-        <input type="submit" value="render"></input>
-      </form>
-    </section>
-    <section class="pane">
-      <h2>Preview</h2>
-      <canvas id="chat" width="100" height="100"></canvas>
-    </section>
-  </main>
-</body>
-
-<script type="module">
-  import { updatePreview, render } from "./index.bundle.mjs";
-  window.updatePreview = updatePreview;
-  window.render = render;
-  updatePreview();
-</script>
-
+  <body>
+    <main>
+      <section class="pane">
+        <h2>Settings</h2>
+        <form name="settings" class="form" onsubmit="render(); return false;">
+          <fieldset name="properties">
+            <legend>Properties</legend>
+            <label>
+              Width:
+              <input
+                name="width"
+                type="number"
+                value="256"
+                oninput="updatePreview()"
+                required
+              />
+            </label>
+            <label>
+              Height:
+              <input
+                name="height"
+                type="number"
+                value="720"
+                oninput="updatePreview()"
+                required
+              />
+            </label>
+            <label>
+              Messages spacing:
+              <input
+                name="messagesSpacing"
+                type="number"
+                value="12"
+                oninput="updatePreview()"
+                required
+              />
+            </label>
+            <label>
+              Lines spacing:
+              <input
+                name="linesSpacing"
+                type="number"
+                value="8"
+                oninput="updatePreview()"
+                required
+              />
+            </label>
+            <label>
+              Emotes size:
+              <input
+                name="emotesSize"
+                type="number"
+                value="24"
+                oninput="updatePreview()"
+                required
+              />
+            </label>
+            <label>
+              Font:
+              <input
+                name="font"
+                type="text"
+                value="14px arial"
+                oninput="updatePreview()"
+                required
+              />
+            </label>
+            <label>
+              Background fill style:
+              <input
+                name="backgroundFillStyle"
+                type="text"
+                value="#00B140"
+                oninput="updatePreview()"
+                required
+              />
+            </label>
+            <label>
+              Author fill style:
+              <input
+                name="authorFillStyle"
+                type="text"
+                value="#BABABA"
+                oninput="updatePreview()"
+                required
+              />
+            </label>
+            <label>
+              Message fill style:
+              <input
+                name="messageFillStyle"
+                type="text"
+                value="#FFFFFF"
+                oninput="updatePreview()"
+                required
+              />
+            </label>
+          </fieldset>
+          <fieldset name="data">
+            <legend>Data</legend>
+            <label>
+              Messages: <input name="messages" type="file" required />
+            </label>
+            <label> Emotes: <input name="emotes" type="file" /> </label>
+          </fieldset>
+          <input type="submit" value="render" />
+        </form>
+      </section>
+      <section class="pane">
+        <h2>Preview</h2>
+        <canvas id="chat"></canvas>
+      </section>
+    </main>
+    <script type="module">
+      import { updatePreview, render } from "./index.bundle.mjs";
+      window.updatePreview = updatePreview;
+      window.render = render;
+      updatePreview();
+    </script>
+  </body>
 </html>
