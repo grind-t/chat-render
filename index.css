@@ -1,8 +1,57 @@
-.pane {
-  display: inline-block;
-  vertical-align: top;
+:root {
+  --page-bg-color: black;
+  --page-text-color: white;
 }
-  
-.form label {
+
+html {
+  box-sizing: border-box;
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 16px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: inherit;
+}
+
+main {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  width: fit-content;
+}
+
+section {
+  margin: 0 0.5rem;
+}
+
+h2 {
+  text-align: center;
+  margin: 0.5rem 0;
+  padding: 0;
+}
+
+fieldset {
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+legend {
+  font-weight: bold;
+}
+
+label {
   display: block;
+  margin: 0.5rem 0;
+}
+
+input {
+  font-size: inherit;
+}
+
+input[type="submit"] {
+  display: block;
+  margin: 0.5rem auto;
 }
