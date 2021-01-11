@@ -42,6 +42,22 @@ function getSettingsFields(): ChatSettingsFields {
   };
 }
 
+function disableForm() {
+  const settings = <HTMLFormElement> document.forms.namedItem("settings");
+  const elements = settings.elements;
+  for (let i = 0; i < elements.length; i++) {
+    elements[i].setAttribute("disabled", "");
+  }
+}
+
+function enableForm() {
+  const settings = <HTMLFormElement> document.forms.namedItem("settings");
+  const elements = settings.elements;
+  for (let i = 0; i < elements.length; i++) {
+    elements[i].removeAttribute("disabled");
+  }
+}
+
 export async function updatePreview() {
   const fields = getPropertiesFields();
   const properties = chatPropertiesFromFields(fields);
@@ -56,5 +72,11 @@ export async function render() {
   const fields = getSettingsFields();
   const settings = await chatSettingsFromFields(fields);
   const canvas = <HTMLCanvasElement> document.querySelector("#chat");
-  renderChat(canvas, settings);
+  const submit = <HTMLInputElement> document.querySelector("#submit");
+  const mimeTypes = <HTMLInputElement> document.querySelector("#mimeTypes");
+  disableForm();
+  submit.value = "rendering...";
+  await renderChat(canvas, settings, mimeTypes.value);
+  submit.value = "render";
+  enableForm();
 }

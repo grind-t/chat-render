@@ -5,14 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content="YouTube/Twitch/etc chat render" />
     <title>Editor</title>
-    <link rel="stylesheet" href="./index.css?version=1" />
+    <link rel="stylesheet" href="./index.css" />
   </head>
 
   <body>
     <main>
-      <section class="pane">
+      <section>
         <h2>Settings</h2>
-        <form name="settings" class="form" onsubmit="render(); return false;">
+        <form name="settings" onsubmit="render(); return false;">
           <fieldset name="properties">
             <legend>Properties</legend>
             <label>
@@ -113,16 +113,25 @@
             </label>
             <label> Emotes: <input name="emotes" type="file" /> </label>
           </fieldset>
-          <input type="submit" value="render" />
+          <div id="render">
+            <input id="submit" type="submit" value="render" />
+            <input id="mimeTypes" value="video/mp4" type="text" list="mimeTypesList">
+            <datalist id="mimeTypesList">
+              <option>image/gif</option>
+              <option>video/mp4</option>
+              <option>video/webm</option>
+              <option>video/avi</option>
+            </datalist>
+          </div>
         </form>
       </section>
-      <section class="pane">
+      <section>
         <h2>Preview</h2>
         <canvas id="chat"></canvas>
       </section>
     </main>
     <script type="module">
-      import { updatePreview, render } from "./index.bundle.mjs?version=1";
+      import { updatePreview, render } from "./index.bundle.mjs";
       window.updatePreview = updatePreview;
       window.render = render;
       updatePreview();

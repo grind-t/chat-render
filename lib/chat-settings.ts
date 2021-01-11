@@ -111,7 +111,6 @@ export async function chatSettingsFromFields(
 ): Promise<ChatSettings> {
   const properties = chatPropertiesFromFields(settings.properties);
   const messages = await getRecords(settings.data.messages);
-  console.log(messages);
   const emotes = settings.data.emotes
     ? await downloadEmotes(settings.data.emotes, properties.emotesSize)
     : undefined;

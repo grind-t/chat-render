@@ -51,7 +51,11 @@ input {
   font-size: inherit;
 }
 
-input[type="submit"] {
-  display: block;
+#render {
   margin: 0.5rem auto;
+  width: fit-content;
+}
+
+#mimeTypes {
+  width: 15ch;
 }
