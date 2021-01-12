@@ -36,31 +36,21 @@
               />
             </label>
             <label>
+              line height (emotes size):
+              <input
+                name="lineHeight"
+                type="number"
+                value="24"
+                oninput="updatePreview()"
+                required
+              />
+            </label>
+            <label>
               Messages spacing:
               <input
                 name="messagesSpacing"
                 type="number"
                 value="12"
-                oninput="updatePreview()"
-                required
-              />
-            </label>
-            <label>
-              Lines spacing:
-              <input
-                name="linesSpacing"
-                type="number"
-                value="8"
-                oninput="updatePreview()"
-                required
-              />
-            </label>
-            <label>
-              Emotes size:
-              <input
-                name="emotesSize"
-                type="number"
-                value="24"
                 oninput="updatePreview()"
                 required
               />
@@ -115,7 +105,12 @@
           </fieldset>
           <div id="render">
             <input id="submit" type="submit" value="render" />
-            <input id="mimeTypes" value="video/mp4" type="text" list="mimeTypesList">
+            <input
+              id="mimeTypes"
+              value="video/mp4"
+              type="text"
+              list="mimeTypesList"
+            />
             <datalist id="mimeTypesList">
               <option>image/gif</option>
               <option>video/mp4</option>

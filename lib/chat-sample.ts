@@ -4,6 +4,7 @@
 
 import { ChatProperties } from "./chat-settings.ts";
 import { Chat, Emotes, Message } from "./chat.ts";
+import { CanvasFont, Font } from "./font.ts";
 import { MessageLayout } from "./message.ts";
 
 function nextMessageFits(
@@ -17,14 +18,14 @@ function nextMessageFits(
 }
 
 function sampleMessage(
-  sampleEmote: HTMLImageElement,
+  font: Font,
   layout: MessageLayout,
-  ctx: CanvasRenderingContext2D,
+  sampleEmote: HTMLImageElement,
 ): Message {
   const sampleEmoteName = ":roflanChelik:";
   const emotesMap = new Map([[sampleEmoteName, sampleEmote]]);
   const emotes = new Emotes(emotesMap);
-  const str = `
+  const text = `
     Author Lorem ipsum ${sampleEmoteName} dolor sit amet, consectetur adipiscing elit, 
     sed do eiusmod tempor incididunt ut labore et dolore magna ${sampleEmoteName} aliqua. 
     Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex 
@@ -32,26 +33,27 @@ function sampleMessage(
     cillum dolore eu fugiat nulla pariatur. Excepteur sint ${sampleEmoteName} occaecat 
     cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
   `;
-  return Message.fromStringWithEmotes(str, emotes, layout, ctx);
+  return Message.fromText(text, font, layout, emotes);
 }
 
 export default async function drawChatSample(
   ctx: CanvasRenderingContext2D,
   properties: ChatProperties,
 ) {
-  const sampleEmote = new Image(properties.emotesSize, properties.emotesSize);
+  ctx.font = properties.font;
+  const font = new CanvasFont(ctx);
+  const messageLayout = new MessageLayout(
+    properties.width,
+    properties.lineHeight,
+    font.measureText(" ").width,
+  );
+  const sampleEmote = new Image(properties.lineHeight, properties.lineHeight);
   const emoteLoading = new Promise((resolve) => sampleEmote.onload = resolve);
   sampleEmote.crossOrigin = "anonymous";
   sampleEmote.src =
     "https://yt3.ggpht.com/DC086aBQNoxY0qcpdIKVTR7w9F0HxRe-OBREc74rr6PHogHaYUha9vDmkL3Pb8SrI108XNUz=w48-h48-c-k-nd";
-  ctx.font = properties.font;
-  const messageLayout = new MessageLayout(
-    ctx,
-    properties.width,
-    properties.linesSpacing,
-  );
   const chat = new Chat(properties.width, properties.height);
-  let lastMessage = sampleMessage(sampleEmote, messageLayout, ctx);
+  let lastMessage = sampleMessage(font, messageLayout, sampleEmote);
   chat.push(lastMessage, properties.messagesSpacing);
   while (
     nextMessageFits(lastMessage, properties.messagesSpacing, properties.height)

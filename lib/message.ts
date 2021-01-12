@@ -1,6 +1,7 @@
 /// <reference no-default-lib="true" />
 /// <reference lib="dom" />
 
+import { Font } from "./font.ts";
 import Rectangle from "./rectangle.ts";
 
 export interface MessageItem extends Rectangle {
@@ -45,18 +46,12 @@ export class Emotes {
 }
 
 export class MessageLayout {
-  readonly itemsSpacing: number;
-  readonly fontHeight: number;
-
   constructor(
-    ctx: CanvasRenderingContext2D,
     public width: number,
-    public linesSpacing: number,
+    public lineHeight: number,
+    public itemsSpacing: number,
     public itemsVerticalAlign: "bottom" | "center" | "top" = "center",
-  ) {
-    this.itemsSpacing = ctx.measureText(" ").width;
-    this.fontHeight = ctx.measureText("W").actualBoundingBoxAscent;
-  }
+  ) {}
 }
 
 export class MessageStyle {
@@ -75,31 +70,16 @@ export class Message extends Rectangle {
     super(0, 0, width, height);
   }
 
-  static fromString(
-    str: string,
+  static fromText(
+    text: string,
+    font: Font,
     layout: MessageLayout,
-    ctx: CanvasRenderingContext2D,
+    emotes?: Emotes,
   ): Message {
-    return setLayout(
-      parseString(str, layout.width, layout.fontHeight, ctx),
-      layout,
-    );
-  }
-
-  static fromStringWithEmotes(
-    str: string,
-    emotes: Emotes,
-    layout: MessageLayout,
-    ctx: CanvasRenderingContext2D,
-  ): Message {
-    return setLayout(
-      parseStringWithEmotes(str, emotes, layout.width, layout.fontHeight, ctx),
-      layout,
-    );
-  }
-
-  static fromStringWithEmotesAndBadges() {
-    throw new Error("Not implemented.");
+    const content = emotes
+      ? parseTextWithEmotes(text, font, layout.width, emotes)
+      : parseText(text, font, layout.width);
+    return setLayout(content, layout);
   }
 
   draw(
@@ -121,69 +101,67 @@ export class Message extends Rectangle {
   }
 }
 
-function splitLongText(
-  text: TextItem,
+function splitLongWord(
+  word: string,
+  font: Font,
   lineWidth: number,
-  ctx: CanvasRenderingContext2D,
 ): TextItem[] {
   const items: TextItem[] = [];
-  const strIter = text.content[Symbol.iterator]();
-  let currentChunk = strIter.next().value;
-  let currentWidth = ctx.measureText(currentChunk).width;
-  for (const char of strIter) {
+  const wordIter = word[Symbol.iterator]();
+  let currentChunk = wordIter.next().value;
+  let currentWidth = font.measureText(currentChunk).width;
+  for (const char of wordIter) {
     const nextChunk = currentChunk + char;
-    const nextWidth = ctx.measureText(nextChunk).width;
+    const nextWidth = font.measureText(nextChunk).width;
     if (nextWidth > lineWidth) {
-      items.push(new TextItem(currentChunk, currentWidth, text.height));
+      items.push(new TextItem(currentChunk, currentWidth, font.height));
       currentChunk = char;
-      currentWidth = ctx.measureText(currentChunk).width;
+      currentWidth = font.measureText(currentChunk).width;
     } else {
       currentChunk = nextChunk;
       currentWidth = nextWidth;
     }
   }
-  items.push(new TextItem(currentChunk, currentWidth, text.height));
+  items.push(new TextItem(currentChunk, currentWidth, font.height));
   return items;
 }
 
-function parseString(
-  str: string,
+function parseText(
+  text: string,
+  font: Font,
   lineWidth: number,
-  fontHeight: number,
-  ctx: CanvasRenderingContext2D,
 ): TextItem[] {
   const items: TextItem[] = [];
-  const words = str.match(/\S+/g);
+  const words = text.match(/\S+/g);
   if (!words) return items;
   for (const word of words) {
-    const item = new TextItem(word, ctx.measureText(word).width, fontHeight);
+    const item = new TextItem(word, font.measureText(word).width, font.height);
     if (item.width <= lineWidth) items.push(item);
-    else items.push(...splitLongText(item, lineWidth, ctx));
+    else items.push(...splitLongWord(item.content, font, lineWidth));
   }
   return items;
 }
 
-function parseStringWithEmotes(
-  str: string,
-  emotes: Emotes,
+function parseTextWithEmotes(
+  text: string,
+  font: Font,
   lineWidth: number,
-  fontHeight: number,
-  ctx: CanvasRenderingContext2D,
+  emotes: Emotes,
 ): MessageItem[] {
   const items: MessageItem[] = [];
-  const emotesMatches = str.matchAll(emotes.regexp);
-  let strIdx = 0;
+  const emotesMatches = text.matchAll(emotes.regexp);
+  let textIdx = 0;
   for (const emoteMatch of emotesMatches) {
-    const strChunk = str.slice(strIdx, emoteMatch.index);
-    const textItems = parseString(strChunk, lineWidth, fontHeight, ctx);
+    const textChunk = text.slice(textIdx, emoteMatch.index);
+    const textItems = parseText(textChunk, font, lineWidth);
     if (textItems) items.push(...textItems);
     const emoteName = emoteMatch[0];
     const emoteImage = <HTMLImageElement> emotes.map.get(emoteName);
     items.push(new ImageItem(emoteImage));
-    strIdx += strChunk.length + emoteName.length;
+    textIdx += textChunk.length + emoteName.length;
   }
-  const lastChunk = str.slice(strIdx, str.length);
-  const textItems = parseString(lastChunk, lineWidth, fontHeight, ctx);
+  const lastChunk = text.slice(textIdx, text.length);
+  const textItems = parseText(lastChunk, font, lineWidth);
   if (textItems) items.push(...textItems);
   return items;
 }
@@ -191,20 +169,19 @@ function parseStringWithEmotes(
 function setLayout(items: MessageItem[], layout: MessageLayout): Message {
   let lineY = 0;
   let lineWidth = 0;
-  const lineHeight = layout.fontHeight;
   for (const item of items) {
     if (lineWidth + item.width > layout.width) {
       lineWidth = 0;
-      lineY += lineHeight + layout.linesSpacing;
+      lineY += layout.lineHeight;
     }
     item.x = lineWidth;
     item.y = lineY;
     if (layout.itemsVerticalAlign === "center") {
-      item.y += lineHeight / 2 - item.height / 2;
+      item.y += layout.lineHeight / 2 - item.height / 2;
     } else if (layout.itemsVerticalAlign === "bottom") {
-      item.y += lineHeight - item.height;
+      item.y += layout.lineHeight - item.height;
     }
     lineWidth += item.width + layout.itemsSpacing;
   }
-  return new Message(items, layout.width, lineY + lineHeight);
+  return new Message(items, layout.width, lineY + layout.lineHeight);
 }

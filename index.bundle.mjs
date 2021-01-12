@@ -50,6 +50,21 @@ class Chat extends Rectangle {
         );
     }
 }
+class CanvasFont {
+    constructor(ctx1){
+        this.ctx = ctx1;
+    }
+    get height() {
+        if (this.font !== this.ctx.font) {
+            this.font = this.ctx.font;
+            this.chachedHeight = this.ctx.measureText("W").actualBoundingBoxAscent;
+        }
+        return this.chachedHeight;
+    }
+    measureText(text) {
+        return this.ctx.measureText(text);
+    }
+}
 class TextItem extends Rectangle {
     constructor(content, width2, height2){
         super(0, 0, width2, height2);
@@ -83,12 +98,11 @@ class Emotes {
     }
 }
 class MessageLayout {
-    constructor(ctx1, width3, linesSpacing, itemsVerticalAlign = "center"){
+    constructor(width3, lineHeight, itemsSpacing, itemsVerticalAlign = "center"){
         this.width = width3;
-        this.linesSpacing = linesSpacing;
+        this.lineHeight = lineHeight;
+        this.itemsSpacing = itemsSpacing;
         this.itemsVerticalAlign = itemsVerticalAlign;
-        this.itemsSpacing = ctx1.measureText(" ").width;
-        this.fontHeight = ctx1.measureText("W").actualBoundingBoxAscent;
     }
 }
 class MessageStyle {
@@ -102,14 +116,9 @@ class Message extends Rectangle {
         super(0, 0, width4, height3);
         this.content = content2;
     }
-    static fromString(str, layout, ctx) {
-        return setLayout(parseString(str, layout.width, layout.fontHeight, ctx), layout);
-    }
-    static fromStringWithEmotes(str, emotes, layout, ctx) {
-        return setLayout(parseStringWithEmotes(str, emotes, layout.width, layout.fontHeight, ctx), layout);
-    }
-    static fromStringWithEmotesAndBadges() {
-        throw new Error("Not implemented.");
+    static fromText(text, font, layout, emotes) {
+        const content3 = emotes ? parseTextWithEmotes(text, font, layout.width, emotes) : parseText(text, font, layout.width);
+        return setLayout(content3, layout);
     }
     draw(ctx, offsetX, offsetY, style) {
         if (!this.content) return;
@@ -819,9 +828,8 @@ function chatPropertiesFromFields(properties) {
     return {
         width: parseFloat(properties.width),
         height: parseFloat(properties.height),
+        lineHeight: parseFloat(properties.lineHeight),
         messagesSpacing: parseFloat(properties.messagesSpacing),
-        linesSpacing: parseFloat(properties.linesSpacing),
-        emotesSize: parseFloat(properties.emotesSize),
         font: properties.font,
         style: new ChatStyle(properties.backgroundFillStyle, new MessageStyle(properties.authorFillStyle, properties.messageFillStyle))
     };
@@ -829,7 +837,7 @@ function chatPropertiesFromFields(properties) {
 async function chatSettingsFromFields(settings) {
     const properties = chatPropertiesFromFields(settings.properties);
     const messages = await getRecords(settings.data.messages);
-    const emotes = settings.data.emotes ? await downloadEmotes(settings.data.emotes, properties.emotesSize) : undefined;
+    const emotes = settings.data.emotes ? await downloadEmotes(settings.data.emotes, properties.lineHeight) : undefined;
     return {
         properties: properties,
         data: {
@@ -842,7 +850,7 @@ function nextMessageFits(lastMessage, messagesSpacing, chatHeight) {
     const commonHeight = lastMessage.height;
     return lastMessage.y + commonHeight + messagesSpacing + commonHeight < chatHeight;
 }
-function sampleMessage(sampleEmote, layout, ctx2) {
+function sampleMessage(font, layout, sampleEmote) {
     const sampleEmoteName = ":roflanChelik:";
     const emotesMap = new Map([
         [
@@ -851,19 +859,20 @@ function sampleMessage(sampleEmote, layout, ctx2) {
         ]
     ]);
     const emotes = new Emotes(emotesMap);
-    const str = `\n    Author Lorem ipsum ${sampleEmoteName} dolor sit amet, consectetur adipiscing elit, \n    sed do eiusmod tempor incididunt ut labore et dolore magna ${sampleEmoteName} aliqua. \n    Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex \n    ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse \n    cillum dolore eu fugiat nulla pariatur. Excepteur sint ${sampleEmoteName} occaecat \n    cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.\n  `;
-    return Message.fromStringWithEmotes(str, emotes, layout, ctx2);
+    const text = `\n    Author Lorem ipsum ${sampleEmoteName} dolor sit amet, consectetur adipiscing elit, \n    sed do eiusmod tempor incididunt ut labore et dolore magna ${sampleEmoteName} aliqua. \n    Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex \n    ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse \n    cillum dolore eu fugiat nulla pariatur. Excepteur sint ${sampleEmoteName} occaecat \n    cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.\n  `;
+    return Message.fromText(text, font, layout, emotes);
 }
 async function drawChatSample(ctx2, properties) {
-    const sampleEmote = new Image(properties.emotesSize, properties.emotesSize);
+    ctx2.font = properties.font;
+    const font = new CanvasFont(ctx2);
+    const messageLayout = new MessageLayout(properties.width, properties.lineHeight, font.measureText(" ").width);
+    const sampleEmote = new Image(properties.lineHeight, properties.lineHeight);
     const emoteLoading = new Promise((resolve)=>sampleEmote.onload = resolve
     );
     sampleEmote.crossOrigin = "anonymous";
     sampleEmote.src = "https://yt3.ggpht.com/DC086aBQNoxY0qcpdIKVTR7w9F0HxRe-OBREc74rr6PHogHaYUha9vDmkL3Pb8SrI108XNUz=w48-h48-c-k-nd";
-    ctx2.font = properties.font;
-    const messageLayout = new MessageLayout(ctx2, properties.width, properties.linesSpacing);
     const chat = new Chat(properties.width, properties.height);
-    let lastMessage = sampleMessage(sampleEmote, messageLayout, ctx2);
+    let lastMessage = sampleMessage(font, messageLayout, sampleEmote);
     chat.push(lastMessage, properties.messagesSpacing);
     while(nextMessageFits(lastMessage, properties.messagesSpacing, properties.height)){
         lastMessage = new Message(lastMessage.content, lastMessage.width, lastMessage.height);
@@ -1525,16 +1534,8 @@ async function renderChat(canvas, settings, mimeType) {
     const properties = settings.properties;
     const data = settings.data;
     ctx2.font = properties.font;
-    const messageLayout = new MessageLayout(ctx2, properties.width, properties.linesSpacing);
-    const emotes = data.emotes;
-    let messageFrom;
-    if (emotes) {
-        messageFrom = (str)=>Message.fromStringWithEmotes(str, emotes, messageLayout, ctx2)
-        ;
-    } else {
-        messageFrom = (str)=>Message.fromString(str, messageLayout, ctx2)
-        ;
-    }
+    const font = new CanvasFont(ctx2);
+    const messageLayout = new MessageLayout(properties.width, properties.lineHeight, font.measureText(" ").width);
     const records = settings.data.messages;
     const chat = new Chat(properties.width, properties.height);
     const { createFFmpeg: createFFmpeg1 , fetchFile: fetchFile1  } = src;
@@ -1545,8 +1546,8 @@ async function renderChat(canvas, settings, mimeType) {
     ];
     records.push(records[records.length - 1]);
     for(let i = 0; i < records.length - 1; i++){
-        const str = `${records[i].author} ${records[i].message}`;
-        const message = messageFrom(str);
+        const text = `${records[i].author} ${records[i].message}`;
+        const message = Message.fromText(text, font, messageLayout, data.emotes);
         chat.push(message, properties.messagesSpacing);
         chat.draw(ctx2, 0, 0, properties.style);
         const blob = await new Promise((resolve)=>canvas.toBlob(resolve)
@@ -1565,74 +1566,73 @@ async function renderChat(canvas, settings, mimeType) {
     const result = ffmpeg.FS("readFile", fileName);
     save(result, fileName, mimeType);
 }
-function splitLongText(text, lineWidth, ctx2) {
+function splitLongWord(word, font, lineWidth) {
     const items = [];
-    const strIter = text.content[Symbol.iterator]();
-    let currentChunk = strIter.next().value;
-    let currentWidth = ctx2.measureText(currentChunk).width;
-    for (const __char of strIter){
+    const wordIter = word[Symbol.iterator]();
+    let currentChunk = wordIter.next().value;
+    let currentWidth = font.measureText(currentChunk).width;
+    for (const __char of wordIter){
         const nextChunk = currentChunk + __char;
-        const nextWidth = ctx2.measureText(nextChunk).width;
+        const nextWidth = font.measureText(nextChunk).width;
         if (nextWidth > lineWidth) {
-            items.push(new TextItem(currentChunk, currentWidth, text.height));
+            items.push(new TextItem(currentChunk, currentWidth, font.height));
             currentChunk = __char;
-            currentWidth = ctx2.measureText(currentChunk).width;
+            currentWidth = font.measureText(currentChunk).width;
         } else {
             currentChunk = nextChunk;
             currentWidth = nextWidth;
         }
     }
-    items.push(new TextItem(currentChunk, currentWidth, text.height));
+    items.push(new TextItem(currentChunk, currentWidth, font.height));
     return items;
 }
-function parseString(str, lineWidth, fontHeight, ctx2) {
+function parseText(text, font, lineWidth) {
     const items = [];
-    const words = str.match(/\S+/g);
+    const words = text.match(/\S+/g);
     if (!words) return items;
     for (const word of words){
-        const item = new TextItem(word, ctx2.measureText(word).width, fontHeight);
+        const item = new TextItem(word, font.measureText(word).width, font.height);
         if (item.width <= lineWidth) items.push(item);
-        else items.push(...splitLongText(item, lineWidth, ctx2));
+        else items.push(...splitLongWord(item.content, font, lineWidth));
     }
     return items;
 }
-function parseStringWithEmotes(str, emotes, lineWidth, fontHeight, ctx2) {
+function parseTextWithEmotes(text, font, lineWidth, emotes) {
     const items = [];
-    const emotesMatches = str.matchAll(emotes.regexp);
-    let strIdx = 0;
+    const emotesMatches = text.matchAll(emotes.regexp);
+    let textIdx = 0;
     for (const emoteMatch of emotesMatches){
-        const strChunk = str.slice(strIdx, emoteMatch.index);
-        const textItems = parseString(strChunk, lineWidth, fontHeight, ctx2);
+        const textChunk = text.slice(textIdx, emoteMatch.index);
+        const textItems = parseText(textChunk, font, lineWidth);
         if (textItems) items.push(...textItems);
         const emoteName = emoteMatch[0];
         const emoteImage = emotes.map.get(emoteName);
         items.push(new ImageItem(emoteImage));
-        strIdx += strChunk.length + emoteName.length;
+        textIdx += textChunk.length + emoteName.length;
     }
-    const lastChunk = str.slice(strIdx, str.length);
-    const textItems = parseString(lastChunk, lineWidth, fontHeight, ctx2);
+    const lastChunk = text.slice(textIdx, text.length);
+    const textItems = parseText(lastChunk, font, lineWidth);
     if (textItems) items.push(...textItems);
     return items;
 }
 function setLayout(items, layout) {
     let lineY = 0;
     let lineWidth = 0;
-    const lineHeight = layout.fontHeight;
     for (const item of items){
         if (lineWidth + item.width > layout.width) {
             lineWidth = 0;
-            lineY += lineHeight + layout.linesSpacing;
+            lineY += layout.lineHeight;
         }
         item.x = lineWidth;
         item.y = lineY;
         if (layout.itemsVerticalAlign === "center") {
-            item.y += lineHeight / 2 - item.height / 2;
+            item.y += layout.lineHeight / 2 - item.height / 2;
         } else if (layout.itemsVerticalAlign === "bottom") {
-            item.y += lineHeight - item.height;
+            item.y += layout.lineHeight - item.height;
         }
         lineWidth += item.width + layout.itemsSpacing;
     }
-    return new Message(items, layout.width, lineY + lineHeight);
+    return new Message(items, layout.width, lineY + layout.lineHeight);
 }
 function getPropertiesFields() {
     const settings = document.forms.namedItem("settings");

@@ -1,12 +1,12 @@
-import { ChatStyle, Emotes, MessageStyle } from "./chat.ts";
+import { ChatStyle, Emotes, MessageLayout, MessageStyle } from "./chat.ts";
 import papa from "https://cdn.skypack.dev/papaparse";
+import { CanvasFont, Font } from "./font.ts";
 
 export interface ChatPropertiesFields {
   width: string;
   height: string;
+  lineHeight: string;
   messagesSpacing: string;
-  linesSpacing: string;
-  emotesSize: string;
   font: string;
   backgroundFillStyle: string;
   authorFillStyle: string;
@@ -26,9 +26,8 @@ export interface ChatSettingsFields {
 export interface ChatProperties {
   width: number;
   height: number;
+  lineHeight: number;
   messagesSpacing: number;
-  linesSpacing: number;
-  emotesSize: number;
   font: string;
   style: ChatStyle;
 }
@@ -95,9 +94,8 @@ export function chatPropertiesFromFields(
   return {
     width: parseFloat(properties.width),
     height: parseFloat(properties.height),
+    lineHeight: parseFloat(properties.lineHeight),
     messagesSpacing: parseFloat(properties.messagesSpacing),
-    linesSpacing: parseFloat(properties.linesSpacing),
-    emotesSize: parseFloat(properties.emotesSize),
     font: properties.font,
     style: new ChatStyle(
       properties.backgroundFillStyle,
@@ -112,7 +110,7 @@ export async function chatSettingsFromFields(
   const properties = chatPropertiesFromFields(settings.properties);
   const messages = await getRecords(settings.data.messages);
   const emotes = settings.data.emotes
-    ? await downloadEmotes(settings.data.emotes, properties.emotesSize)
+    ? await downloadEmotes(settings.data.emotes, properties.lineHeight)
     : undefined;
   return {
     properties: properties,

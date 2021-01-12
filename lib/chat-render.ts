@@ -2,6 +2,7 @@ import { ChatSettings } from "./chat-settings.ts";
 import { Chat, MessageLayout } from "./chat.ts";
 import { Emotes, Message } from "./message.ts";
 import ffmpegWASM from "https://cdn.skypack.dev/@ffmpeg/ffmpeg";
+import { CanvasFont } from "./font.ts";
 
 function save(content: BlobPart, fileName: string, mimeType: string) {
   const a = document.createElement("a");
@@ -22,19 +23,12 @@ export default async function renderChat(
   const properties = settings.properties;
   const data = settings.data;
   ctx.font = properties.font;
+  const font = new CanvasFont(ctx);
   const messageLayout = new MessageLayout(
-    ctx,
     properties.width,
-    properties.linesSpacing,
+    properties.lineHeight,
+    font.measureText(" ").width,
   );
-  const emotes = data.emotes;
-  let messageFrom: (str: string) => Message;
-  if (emotes) {
-    messageFrom = (str: string) =>
-      Message.fromStringWithEmotes(str, emotes, messageLayout, ctx);
-  } else {
-    messageFrom = (str: string) => Message.fromString(str, messageLayout, ctx);
-  }
   const records = settings.data.messages;
   const chat = new Chat(properties.width, properties.height);
   const { createFFmpeg, fetchFile } = ffmpegWASM;
@@ -43,8 +37,8 @@ export default async function renderChat(
   const ffmpegScript = ["ffconcat version 1.0"];
   records.push(records[records.length - 1]);
   for (let i = 0; i < records.length - 1; i++) {
-    const str = `${records[i].author} ${records[i].message}`;
-    const message = messageFrom(str);
+    const text = `${records[i].author} ${records[i].message}`;
+    const message = Message.fromText(text, font, messageLayout, data.emotes);
     chat.push(message, properties.messagesSpacing);
     chat.draw(ctx, 0, 0, properties.style);
     const blob = await new Promise((resolve) => canvas.toBlob(resolve));
