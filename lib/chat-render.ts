@@ -37,8 +37,13 @@ export default async function renderChat(
   const ffmpegScript = ["ffconcat version 1.0"];
   records.push(records[records.length - 1]);
   for (let i = 0; i < records.length - 1; i++) {
-    const text = `${records[i].author} ${records[i].message}`;
-    const message = Message.fromText(text, font, messageLayout, data.emotes);
+    const message = Message.fromText(
+      records[i].author,
+      records[i].message,
+      font,
+      messageLayout,
+      data.emotes,
+    );
     chat.push(message, properties.messagesSpacing);
     chat.draw(ctx, 0, 0, properties.style);
     const blob = await new Promise((resolve) => canvas.toBlob(resolve));

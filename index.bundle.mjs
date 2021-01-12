@@ -66,9 +66,9 @@ class CanvasFont {
     }
 }
 class TextItem extends Rectangle {
-    constructor(content, width2, height2){
+    constructor(content3, width2, height2){
         super(0, 0, width2, height2);
-        this.content = content;
+        this.content = content3;
     }
     draw(ctx, offsetX, offsetY) {
         const x1 = this.x + offsetX;
@@ -112,25 +112,49 @@ class MessageStyle {
     }
 }
 class Message extends Rectangle {
-    constructor(content2, width4, height3){
+    constructor(author1, content2, width4, height3){
         super(0, 0, width4, height3);
+        this.author = author1;
         this.content = content2;
     }
-    static fromText(text, font, layout, emotes) {
+    static fromText(author, text, font, layout, emotes) {
+        const authorItem = new TextItem(author, font.measureText(author).width, font.height);
         const content3 = emotes ? parseTextWithEmotes(text, font, layout.width, emotes) : parseText(text, font, layout.width);
-        return setLayout(content3, layout);
+        return Message.withLayout(authorItem, content3, layout);
+    }
+    static withLayout(author, content, layout) {
+        const items = [
+            author,
+            ...content
+        ];
+        let lineY = 0;
+        let lineWidth = 0;
+        for (const item of items){
+            if (item.width <= 0) continue;
+            if (lineWidth + item.width > layout.width) {
+                lineWidth = 0;
+                lineY += layout.lineHeight;
+            }
+            item.x = lineWidth;
+            item.y = lineY;
+            if (layout.itemsVerticalAlign === "center") {
+                item.y += layout.lineHeight / 2 - item.height / 2;
+            } else if (layout.itemsVerticalAlign === "bottom") {
+                item.y += layout.lineHeight - item.height;
+            }
+            lineWidth += item.width + layout.itemsSpacing;
+        }
+        const height4 = lineY + layout.lineHeight;
+        return new Message(author, content, layout.width, height4);
     }
     draw(ctx, offsetX, offsetY, style) {
-        if (!this.content) return;
         const x1 = this.x + offsetX;
         const y1 = this.y + offsetY;
         ctx.fillStyle = style.authorFillStyle;
-        const author = this.content[0];
-        author.draw(ctx, x1, y1);
+        this.author.draw(ctx, x1, y1);
         ctx.fillStyle = style.messageFillStyle;
-        for(let i = 1; i < this.content.length; i++){
-            this.content[i].draw(ctx, x1, y1);
-        }
+        this.content.forEach((item)=>item.draw(ctx, x1, y1)
+        );
     }
 }
 function createCommonjsModule(fn, basedir, module) {
@@ -859,8 +883,9 @@ function sampleMessage(font, layout, sampleEmote) {
         ]
     ]);
     const emotes = new Emotes(emotesMap);
-    const text = `\n    Author Lorem ipsum ${sampleEmoteName} dolor sit amet, consectetur adipiscing elit, \n    sed do eiusmod tempor incididunt ut labore et dolore magna ${sampleEmoteName} aliqua. \n    Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex \n    ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse \n    cillum dolore eu fugiat nulla pariatur. Excepteur sint ${sampleEmoteName} occaecat \n    cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.\n  `;
-    return Message.fromText(text, font, layout, emotes);
+    const author2 = "Author";
+    const text = `\n    Lorem ipsum ${sampleEmoteName} dolor sit amet, consectetur adipiscing elit, \n    sed do eiusmod tempor incididunt ut labore et dolore magna ${sampleEmoteName} aliqua. \n    Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex \n    ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse \n    cillum dolore eu fugiat nulla pariatur. Excepteur sint ${sampleEmoteName} occaecat \n    cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.\n  `;
+    return Message.fromText(author2, text, font, layout, emotes);
 }
 async function drawChatSample(ctx2, properties) {
     ctx2.font = properties.font;
@@ -875,7 +900,7 @@ async function drawChatSample(ctx2, properties) {
     let lastMessage = sampleMessage(font, messageLayout, sampleEmote);
     chat.push(lastMessage, properties.messagesSpacing);
     while(nextMessageFits(lastMessage, properties.messagesSpacing, properties.height)){
-        lastMessage = new Message(lastMessage.content, lastMessage.width, lastMessage.height);
+        lastMessage = new Message(lastMessage.author, lastMessage.content, lastMessage.width, lastMessage.height);
         chat.push(lastMessage, properties.messagesSpacing);
     }
     await emoteLoading;
@@ -1243,7 +1268,7 @@ const keywords = [
     "WebAssembly",
     "video"
 ];
-const author = "Jerome Wu <jeromewus@gmail.com>";
+const author2 = "Jerome Wu <jeromewus@gmail.com>";
 const license = "MIT";
 const bugs = {
     url: "https://github.com/ffmpegwasm/ffmpeg.wasm/issues"
@@ -1289,7 +1314,7 @@ var require$$3 = {
     browser: browser$1,
     repository,
     keywords,
-    author,
+    author: author2,
     license,
     bugs,
     engines,
@@ -1516,10 +1541,10 @@ var src = {
     createFFmpeg,
     fetchFile: fetchFile$1
 };
-function save(content3, fileName, mimeType) {
+function save(content4, fileName, mimeType) {
     const a = document.createElement("a");
     const file = new Blob([
-        content3
+        content4
     ], {
         type: mimeType
     });
@@ -1546,8 +1571,7 @@ async function renderChat(canvas, settings, mimeType) {
     ];
     records.push(records[records.length - 1]);
     for(let i = 0; i < records.length - 1; i++){
-        const text = `${records[i].author} ${records[i].message}`;
-        const message = Message.fromText(text, font, messageLayout, data.emotes);
+        const message = Message.fromText(records[i].author, records[i].message, font, messageLayout, data.emotes);
         chat.push(message, properties.messagesSpacing);
         chat.draw(ctx2, 0, 0, properties.style);
         const blob = await new Promise((resolve)=>canvas.toBlob(resolve)
@@ -1565,74 +1589,6 @@ async function renderChat(canvas, settings, mimeType) {
     await ffmpeg.run("-f", "concat", "-i", "script.txt", "-vsync", "vfr", "-pix_fmt", "yuv420p", fileName);
     const result = ffmpeg.FS("readFile", fileName);
     save(result, fileName, mimeType);
-}
-function splitLongWord(word, font, lineWidth) {
-    const items = [];
-    const wordIter = word[Symbol.iterator]();
-    let currentChunk = wordIter.next().value;
-    let currentWidth = font.measureText(currentChunk).width;
-    for (const __char of wordIter){
-        const nextChunk = currentChunk + __char;
-        const nextWidth = font.measureText(nextChunk).width;
-        if (nextWidth > lineWidth) {
-            items.push(new TextItem(currentChunk, currentWidth, font.height));
-            currentChunk = __char;
-            currentWidth = font.measureText(currentChunk).width;
-        } else {
-            currentChunk = nextChunk;
-            currentWidth = nextWidth;
-        }
-    }
-    items.push(new TextItem(currentChunk, currentWidth, font.height));
-    return items;
-}
-function parseText(text, font, lineWidth) {
-    const items = [];
-    const words = text.match(/\S+/g);
-    if (!words) return items;
-    for (const word of words){
-        const item = new TextItem(word, font.measureText(word).width, font.height);
-        if (item.width <= lineWidth) items.push(item);
-        else items.push(...splitLongWord(item.content, font, lineWidth));
-    }
-    return items;
-}
-function parseTextWithEmotes(text, font, lineWidth, emotes) {
-    const items = [];
-    const emotesMatches = text.matchAll(emotes.regexp);
-    let textIdx = 0;
-    for (const emoteMatch of emotesMatches){
-        const textChunk = text.slice(textIdx, emoteMatch.index);
-        const textItems = parseText(textChunk, font, lineWidth);
-        if (textItems) items.push(...textItems);
-        const emoteName = emoteMatch[0];
-        const emoteImage = emotes.map.get(emoteName);
-        items.push(new ImageItem(emoteImage));
-        textIdx += textChunk.length + emoteName.length;
-    }
-    const lastChunk = text.slice(textIdx, text.length);
-    const textItems = parseText(lastChunk, font, lineWidth);
-    if (textItems) items.push(...textItems);
-    return items;
-}
-function setLayout(items, layout) {
-    let lineY = 0;
-    let lineWidth = 0;
-    for (const item of items){
-        if (lineWidth + item.width > layout.width) {
-            lineWidth = 0;
-            lineY += layout.lineHeight;
-        }
-        item.x = lineWidth;
-        item.y = lineY;
-        if (layout.itemsVerticalAlign === "center") {
-            item.y += layout.lineHeight / 2 - item.height / 2;
-        } else if (layout.itemsVerticalAlign === "bottom") {
-            item.y += layout.lineHeight - item.height;
-        }
-        lineWidth += item.width + layout.itemsSpacing;
-    }
-    return new Message(items, layout.width, lineY + layout.lineHeight);
 }
 function getPropertiesFields() {
     const settings = document.forms.namedItem("settings");
@@ -1698,4 +1654,53 @@ export async function render() {
     await renderChat(canvas, settings, mimeTypes.value);
     submit.value = "render";
     enableForm();
+}
+function splitLongWord(word, font, lineWidth) {
+    const items = [];
+    const wordIter = word[Symbol.iterator]();
+    let currentChunk = wordIter.next().value;
+    let currentWidth = font.measureText(currentChunk).width;
+    for (const __char of wordIter){
+        const nextChunk = currentChunk + __char;
+        const nextWidth = font.measureText(nextChunk).width;
+        if (nextWidth > lineWidth) {
+            items.push(new TextItem(currentChunk, currentWidth, font.height));
+            currentChunk = __char;
+            currentWidth = font.measureText(currentChunk).width;
+        } else {
+            currentChunk = nextChunk;
+            currentWidth = nextWidth;
+        }
+    }
+    items.push(new TextItem(currentChunk, currentWidth, font.height));
+    return items;
+}
+function parseText(text, font, lineWidth) {
+    const items = [];
+    const words = text.match(/\S+/g);
+    if (!words) return items;
+    for (const word of words){
+        const item = new TextItem(word, font.measureText(word).width, font.height);
+        if (item.width <= lineWidth) items.push(item);
+        else items.push(...splitLongWord(item.content, font, lineWidth));
+    }
+    return items;
+}
+function parseTextWithEmotes(text, font, lineWidth, emotes) {
+    const items = [];
+    const emotesMatches = text.matchAll(emotes.regexp);
+    let textIdx = 0;
+    for (const emoteMatch of emotesMatches){
+        const textChunk = text.slice(textIdx, emoteMatch.index);
+        const textItems = parseText(textChunk, font, lineWidth);
+        if (textItems) items.push(...textItems);
+        const emoteName = emoteMatch[0];
+        const emoteImage = emotes.map.get(emoteName);
+        items.push(new ImageItem(emoteImage));
+        textIdx += textChunk.length + emoteName.length;
+    }
+    const lastChunk = text.slice(textIdx, text.length);
+    const textItems = parseText(lastChunk, font, lineWidth);
+    if (textItems) items.push(...textItems);
+    return items;
 }

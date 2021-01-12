@@ -25,15 +25,16 @@ function sampleMessage(
   const sampleEmoteName = ":roflanChelik:";
   const emotesMap = new Map([[sampleEmoteName, sampleEmote]]);
   const emotes = new Emotes(emotesMap);
+  const author = "Author";
   const text = `
-    Author Lorem ipsum ${sampleEmoteName} dolor sit amet, consectetur adipiscing elit, 
+    Lorem ipsum ${sampleEmoteName} dolor sit amet, consectetur adipiscing elit, 
     sed do eiusmod tempor incididunt ut labore et dolore magna ${sampleEmoteName} aliqua. 
     Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex 
     ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse 
     cillum dolore eu fugiat nulla pariatur. Excepteur sint ${sampleEmoteName} occaecat 
     cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
   `;
-  return Message.fromText(text, font, layout, emotes);
+  return Message.fromText(author, text, font, layout, emotes);
 }
 
 export default async function drawChatSample(
@@ -59,6 +60,7 @@ export default async function drawChatSample(
     nextMessageFits(lastMessage, properties.messagesSpacing, properties.height)
   ) {
     lastMessage = new Message(
+      lastMessage.author,
       lastMessage.content,
       lastMessage.width,
       lastMessage.height,

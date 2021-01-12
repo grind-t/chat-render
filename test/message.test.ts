@@ -21,7 +21,7 @@ Deno.test("Message.fromText", () => {
   const text = `${longWord} ${word}`;
   const layout = new MessageLayout(7, 1, 1, "top");
   const font = new CanvasFont(ctxMock);
-  const message = Message.fromText(text, font, layout);
+  const message = Message.fromText('', text, font, layout);
   const items = message.content;
   console.log("\nParses the string correctly");
   assertEquals(items[0].content, "longwor");
@@ -45,7 +45,7 @@ Deno.test("Message.fromText with emotes", () => {
   const text = `${word} ${emoteName}${emoteName}`;
   const layout = new MessageLayout(7, 1, 1, "top");
   const font = new CanvasFont(ctxMock);
-  const message = Message.fromText(text, font, layout, emotes);
+  const message = Message.fromText('', text, font, layout, emotes);
   const items = message.content;
   console.log("\nParses the string correctly");
   assertEquals(items[0].content, "word");

@@ -63,6 +63,7 @@ export class MessageStyle {
 
 export class Message extends Rectangle {
   constructor(
+    readonly author: MessageItem,
     readonly content: ReadonlyArray<MessageItem>,
     width: number,
     height: number,
@@ -71,15 +72,48 @@ export class Message extends Rectangle {
   }
 
   static fromText(
+    author: string,
     text: string,
     font: Font,
     layout: MessageLayout,
     emotes?: Emotes,
   ): Message {
+    const authorItem = new TextItem(
+      author,
+      font.measureText(author).width,
+      font.height,
+    );
     const content = emotes
       ? parseTextWithEmotes(text, font, layout.width, emotes)
       : parseText(text, font, layout.width);
-    return setLayout(content, layout);
+    return Message.withLayout(authorItem, content, layout);
+  }
+
+  static withLayout(
+    author: MessageItem,
+    content: MessageItem[],
+    layout: MessageLayout,
+  ): Message {
+    const items = [author, ...content];
+    let lineY = 0;
+    let lineWidth = 0;
+    for (const item of items) {
+      if (item.width <= 0) continue;
+      if (lineWidth + item.width > layout.width) {
+        lineWidth = 0;
+        lineY += layout.lineHeight;
+      }
+      item.x = lineWidth;
+      item.y = lineY;
+      if (layout.itemsVerticalAlign === "center") {
+        item.y += layout.lineHeight / 2 - item.height / 2;
+      } else if (layout.itemsVerticalAlign === "bottom") {
+        item.y += layout.lineHeight - item.height;
+      }
+      lineWidth += item.width + layout.itemsSpacing;
+    }
+    const height = lineY + layout.lineHeight;
+    return new Message(author, content, layout.width, height);
   }
 
   draw(
@@ -88,16 +122,12 @@ export class Message extends Rectangle {
     offsetY: number,
     style: MessageStyle,
   ) {
-    if (!this.content) return;
     const x = this.x + offsetX;
     const y = this.y + offsetY;
     ctx.fillStyle = style.authorFillStyle;
-    const author = this.content[0];
-    author.draw(ctx, x, y);
+    this.author.draw(ctx, x, y);
     ctx.fillStyle = style.messageFillStyle;
-    for (let i = 1; i < this.content.length; i++) {
-      this.content[i].draw(ctx, x, y);
-    }
+    this.content.forEach((item) => item.draw(ctx, x, y));
   }
 }
 
@@ -164,24 +194,4 @@ function parseTextWithEmotes(
   const textItems = parseText(lastChunk, font, lineWidth);
   if (textItems) items.push(...textItems);
   return items;
-}
-
-function setLayout(items: MessageItem[], layout: MessageLayout): Message {
-  let lineY = 0;
-  let lineWidth = 0;
-  for (const item of items) {
-    if (lineWidth + item.width > layout.width) {
-      lineWidth = 0;
-      lineY += layout.lineHeight;
-    }
-    item.x = lineWidth;
-    item.y = lineY;
-    if (layout.itemsVerticalAlign === "center") {
-      item.y += layout.lineHeight / 2 - item.height / 2;
-    } else if (layout.itemsVerticalAlign === "bottom") {
-      item.y += layout.lineHeight - item.height;
-    }
-    lineWidth += item.width + layout.itemsSpacing;
-  }
-  return new Message(items, layout.width, lineY + layout.lineHeight);
 }
