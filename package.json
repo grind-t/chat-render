@@ -15,5 +15,8 @@
   "bugs": {
     "url": "https://github.com/grindevelop/chatrender/issues"
   },
-  "homepage": "https://github.com/grindevelop/chatrender#readme"
+  "homepage": "https://github.com/grindevelop/chatrender#readme",
+  "devDependencies": {
+    "typescript": "^4.3.5"
+  }
 }
