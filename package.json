@@ -2,9 +2,21 @@
   "name": "chat-render",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "src/**/*"
+  ],
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "tsc",
+    "format": "prettier --write .",
+    "lint": "eslint .",
+    "test": "jest",
+    "prepare": "npm run build",
+    "prepublishOnly": "npm test && npm run lint",
+    "preversion": "npm run lint",
+    "version": "npm run format && git add -A src",
+    "postversion": "git push && git push --tags"
   },
   "repository": {
     "type": "git",
@@ -18,6 +30,13 @@
   "homepage": "https://github.com/grindevelop/chatrender#readme",
   "devDependencies": {
     "@tsconfig/recommended": "^1.0.1",
+    "@types/jest": "^26.0.24",
+    "@typescript-eslint/eslint-plugin": "^4.28.2",
+    "@typescript-eslint/parser": "^4.28.2",
+    "eslint": "^7.30.0",
+    "jest": "^27.0.6",
+    "prettier": "2.3.2",
+    "ts-jest": "^27.0.3",
     "typescript": "^4.3.5"
   }
 }
