@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/grindevelop/chatrender#readme",
   "devDependencies": {
+    "@tsconfig/recommended": "^1.0.1",
     "typescript": "^4.3.5"
   }
 }
